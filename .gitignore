@@ -44,9 +44,9 @@ mlruns/
 mlartifacts/
 
 # Data files
-*.csv
+# *.csv  # Commented out to allow dataset
 *.parquet
-*.json
+# *.json  # Commented out to allow config files
 !config/*.yaml
 !config/*.json
 

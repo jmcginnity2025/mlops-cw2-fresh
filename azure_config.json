@@ -1,0 +1,7 @@
+{
+  "subscription_id": "d5156f99-abd5-4af9-9e2d-a875ef22df46",
+  "resource_group": "cw2-mlops-rg",
+  "workspace_name": "cw2-mlops-workspace",
+  "location": "francecentral",
+  "compute_name": "cpu-cluster"
+}
