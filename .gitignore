@@ -97,3 +97,4 @@ junit/
 *.bak
 *.swp
 nul
+CREDENTIALS_LOCAL_ONLY.txt
