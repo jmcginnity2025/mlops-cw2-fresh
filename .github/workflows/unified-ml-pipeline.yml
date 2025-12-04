@@ -107,10 +107,12 @@ jobs:
 
         # Create training job
         # Azure ML will download the dataset and pass its path to the script
-        # Use single braces for Azure ML input substitution (not GitHub Actions ${{ }})
+        # Build command string with proper escaping for Azure ML input substitution
+        train_command = "python train_azure.py --data_path " + "{inputs.dataset_input}"
+
         job = command(
             code="./",
-            command="python train_azure.py --data_path {inputs.dataset_input}",
+            command=train_command,
             inputs={
                 "dataset_input": Input(
                     type="uri_file",
