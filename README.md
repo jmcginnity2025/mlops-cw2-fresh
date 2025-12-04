@@ -72,3 +72,4 @@ All coursework requirements (CW2) met:
 ## License
 
 Academic project for MLOps coursework.
+# Activating Option B - Azure ML Cloud Training
