@@ -97,48 +97,47 @@ print("\n" + "="*70)
 print("ITERATION 1: Baseline Random Forest")
 print("="*70)
 
-with mlflow.start_run(run_name="iteration_1_random_forest"):
-    # Log parameters
-    mlflow.log_param("model_type", "RandomForest")
-    mlflow.log_param("n_estimators", 100)
-    mlflow.log_param("max_depth", 10)
-    mlflow.log_param("iteration", 1)
+# Azure ML automatically manages the run, so we don't need start_run()
+# Log parameters directly
+mlflow.log_param("iteration_1_model_type", "RandomForest")
+mlflow.log_param("iteration_1_n_estimators", 100)
+mlflow.log_param("iteration_1_max_depth", 10)
 
-    # Train
-    print("Training...")
-    model1 = RandomForestClassifier(
-        n_estimators=100,
-        max_depth=10,
-        random_state=42,
-        n_jobs=-1
-    )
-    model1.fit(X_train, y_train)
+# Train
+print("Training...")
+model1 = RandomForestClassifier(
+    n_estimators=100,
+    max_depth=10,
+    random_state=42,
+    n_jobs=-1
+)
+model1.fit(X_train, y_train)
 
-    # Evaluate
-    y_train_pred = model1.predict(X_train)
-    y_test_pred = model1.predict(X_test)
+# Evaluate
+y_train_pred = model1.predict(X_train)
+y_test_pred = model1.predict(X_test)
 
-    train_acc = accuracy_score(y_train, y_train_pred)
-    test_acc = accuracy_score(y_test, y_test_pred)
-    train_f1 = f1_score(y_train, y_train_pred, average='weighted')
-    test_f1 = f1_score(y_test, y_test_pred, average='weighted')
-    test_precision = precision_score(y_test, y_test_pred, average='weighted')
-    test_recall = recall_score(y_test, y_test_pred, average='weighted')
+train_acc = accuracy_score(y_train, y_train_pred)
+test_acc = accuracy_score(y_test, y_test_pred)
+train_f1 = f1_score(y_train, y_train_pred, average='weighted')
+test_f1 = f1_score(y_test, y_test_pred, average='weighted')
+test_precision = precision_score(y_test, y_test_pred, average='weighted')
+test_recall = recall_score(y_test, y_test_pred, average='weighted')
 
-    # Log metrics
-    mlflow.log_metric("train_accuracy", train_acc)
-    mlflow.log_metric("test_accuracy", test_acc)
-    mlflow.log_metric("train_f1", train_f1)
-    mlflow.log_metric("test_f1", test_f1)
-    mlflow.log_metric("test_precision", test_precision)
-    mlflow.log_metric("test_recall", test_recall)
+# Log metrics for iteration 1
+mlflow.log_metric("iteration_1_train_accuracy", train_acc)
+mlflow.log_metric("iteration_1_test_accuracy", test_acc)
+mlflow.log_metric("iteration_1_train_f1", train_f1)
+mlflow.log_metric("iteration_1_test_f1", test_f1)
+mlflow.log_metric("iteration_1_test_precision", test_precision)
+mlflow.log_metric("iteration_1_test_recall", test_recall)
 
-    # Log model
-    mlflow.sklearn.log_model(model1, "model")
+# Log model
+mlflow.sklearn.log_model(model1, "iteration_1_model")
 
-    print(f"   Train Accuracy: {train_acc:.4f}")
-    print(f"   Test Accuracy:  {test_acc:.4f}")
-    print(f"   Test F1 Score:  {test_f1:.4f}")
+print(f"   Train Accuracy: {train_acc:.4f}")
+print(f"   Test Accuracy:  {test_acc:.4f}")
+print(f"   Test F1 Score:  {test_f1:.4f}")
 
 # ============================================================================
 # ITERATION 2: XGBoost (Improved)
@@ -147,53 +146,52 @@ print("\n" + "="*70)
 print("ITERATION 2: Improved XGBoost")
 print("="*70)
 
-with mlflow.start_run(run_name="iteration_2_xgboost"):
-    # Log parameters
-    mlflow.log_param("model_type", "XGBoost")
-    mlflow.log_param("n_estimators", 200)
-    mlflow.log_param("max_depth", 6)
-    mlflow.log_param("learning_rate", 0.1)
-    mlflow.log_param("iteration", 2)
+# Azure ML automatically manages the run, so we don't need start_run()
+# Log parameters directly
+mlflow.log_param("iteration_2_model_type", "XGBoost")
+mlflow.log_param("iteration_2_n_estimators", 200)
+mlflow.log_param("iteration_2_max_depth", 6)
+mlflow.log_param("iteration_2_learning_rate", 0.1)
 
-    # Train
-    print("Training...")
-    model2 = XGBClassifier(
-        n_estimators=200,
-        max_depth=6,
-        learning_rate=0.1,
-        subsample=0.8,
-        colsample_bytree=0.8,
-        random_state=42,
-        eval_metric='mlogloss',
-        use_label_encoder=False
-    )
-    model2.fit(X_train, y_train)
+# Train
+print("Training...")
+model2 = XGBClassifier(
+    n_estimators=200,
+    max_depth=6,
+    learning_rate=0.1,
+    subsample=0.8,
+    colsample_bytree=0.8,
+    random_state=42,
+    eval_metric='mlogloss',
+    use_label_encoder=False
+)
+model2.fit(X_train, y_train)
 
-    # Evaluate
-    y_train_pred = model2.predict(X_train)
-    y_test_pred = model2.predict(X_test)
+# Evaluate
+y_train_pred = model2.predict(X_train)
+y_test_pred = model2.predict(X_test)
 
-    train_acc = accuracy_score(y_train, y_train_pred)
-    test_acc = accuracy_score(y_test, y_test_pred)
-    train_f1 = f1_score(y_train, y_train_pred, average='weighted')
-    test_f1 = f1_score(y_test, y_test_pred, average='weighted')
-    test_precision = precision_score(y_test, y_test_pred, average='weighted')
-    test_recall = recall_score(y_test, y_test_pred, average='weighted')
+train_acc = accuracy_score(y_train, y_train_pred)
+test_acc = accuracy_score(y_test, y_test_pred)
+train_f1 = f1_score(y_train, y_train_pred, average='weighted')
+test_f1 = f1_score(y_test, y_test_pred, average='weighted')
+test_precision = precision_score(y_test, y_test_pred, average='weighted')
+test_recall = recall_score(y_test, y_test_pred, average='weighted')
 
-    # Log metrics
-    mlflow.log_metric("train_accuracy", train_acc)
-    mlflow.log_metric("test_accuracy", test_acc)
-    mlflow.log_metric("train_f1", train_f1)
-    mlflow.log_metric("test_f1", test_f1)
-    mlflow.log_metric("test_precision", test_precision)
-    mlflow.log_metric("test_recall", test_recall)
+# Log metrics for iteration 2
+mlflow.log_metric("iteration_2_train_accuracy", train_acc)
+mlflow.log_metric("iteration_2_test_accuracy", test_acc)
+mlflow.log_metric("iteration_2_train_f1", train_f1)
+mlflow.log_metric("iteration_2_test_f1", test_f1)
+mlflow.log_metric("iteration_2_test_precision", test_precision)
+mlflow.log_metric("iteration_2_test_recall", test_recall)
 
-    # Log model
-    mlflow.xgboost.log_model(model2, "model")
+# Log model
+mlflow.xgboost.log_model(model2, "iteration_2_model")
 
-    print(f"   Train Accuracy: {train_acc:.4f}")
-    print(f"   Test Accuracy:  {test_acc:.4f}")
-    print(f"   Test F1 Score:  {test_f1:.4f}")
+print(f"   Train Accuracy: {train_acc:.4f}")
+print(f"   Test Accuracy:  {test_acc:.4f}")
+print(f"   Test F1 Score:  {test_f1:.4f}")
 
 print("\n" + "="*70)
 print("TRAINING COMPLETE")
