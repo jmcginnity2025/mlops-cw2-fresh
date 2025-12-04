@@ -107,8 +107,8 @@ jobs:
 
         # Create training job
         # Azure ML will download the dataset and pass its path to the script
-        # Build command string with proper escaping for Azure ML input substitution
-        train_command = "python train_azure.py --data_path " + "{inputs.dataset_input}"
+        # IMPORTANT: Quote the path to handle spaces in filename
+        train_command = 'python train_azure.py --data_path "{inputs.dataset_input}"'
 
         job = command(
             code="./",

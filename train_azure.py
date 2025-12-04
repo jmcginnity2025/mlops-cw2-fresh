@@ -17,15 +17,19 @@ import os
 
 # Parse arguments
 parser = argparse.ArgumentParser()
-parser.add_argument('--data_path', type=str, help='Path to dataset')
+parser.add_argument('--data_path', type=str, required=True, help='Path to dataset')
 args = parser.parse_args()
 
 print("="*70)
 print("AZURE ML TRAINING - Support Ticket Priority Classification")
 print("="*70)
 
-# Load data
+# Verify data path received
 print(f"\n1. Loading dataset from: {args.data_path}")
+if not os.path.exists(args.data_path):
+    print(f"ERROR: Dataset file not found at: {args.data_path}")
+    exit(1)
+
 df = pd.read_csv(args.data_path)
 print(f"   Loaded {df.shape[0]} rows, {df.shape[1]} columns")
 
