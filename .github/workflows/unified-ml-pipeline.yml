@@ -108,8 +108,13 @@ jobs:
         # Create training job
         job = command(
             code="./",
-            command="python train_azure.py --data_path ${{inputs.dataset}}",
-            inputs={"dataset": Input(type="uri_file", path=data_asset.id)},
+            command="python train_azure.py --data_path ${{inputs.training_data}}",
+            inputs={
+                "training_data": Input(
+                    type="uri_file",
+                    path=data_asset.path
+                )
+            },
             environment=env,
             compute="${{ env.COMPUTE_NAME }}",
             experiment_name="unified-cicd-training",
