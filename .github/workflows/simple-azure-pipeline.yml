@@ -102,7 +102,7 @@ jobs:
         print("\n📥 Downloading outputs...")
         ml_client.jobs.download(
             name=submitted_job.name,
-            download_path="./downloads",
+            download_path=".",
             output_name="outputs"
         )
 
@@ -110,23 +110,33 @@ jobs:
         import os
         import json
 
-        output_dir = f"./downloads/named-outputs/outputs"
-        if os.path.exists(output_dir):
-            print(f"\n📦 Downloaded files:")
-            for file in os.listdir(output_dir):
+        # Search for the outputs directory
+        output_dir = None
+        for root, dirs, files in os.walk("."):
+            if "outputs" in root and any(f.endswith(".json") for f in files):
+                output_dir = root
+                break
+
+        if output_dir:
+            print(f"\n📦 Found outputs in: {output_dir}")
+            files = os.listdir(output_dir)
+            for file in files:
                 print(f"   - {file}")
 
             # Load and display metrics
-            if os.path.exists(f"{output_dir}/iteration_1_metrics.json"):
-                with open(f"{output_dir}/iteration_1_metrics.json") as f:
+            m1_path = os.path.join(output_dir, "iteration_1_metrics.json")
+            m2_path = os.path.join(output_dir, "iteration_2_metrics.json")
+
+            if os.path.exists(m1_path) and os.path.exists(m2_path):
+                with open(m1_path) as f:
                     m1 = json.load(f)
+                with open(m2_path) as f:
+                    m2 = json.load(f)
+
                 print(f"\n📊 Iteration 1 (Random Forest):")
                 print(f"   Accuracy: {m1['test_accuracy']:.4f}")
                 print(f"   F1 Score: {m1['test_f1']:.4f}")
 
-            if os.path.exists(f"{output_dir}/iteration_2_metrics.json"):
-                with open(f"{output_dir}/iteration_2_metrics.json") as f:
-                    m2 = json.load(f)
                 print(f"\n📊 Iteration 2 (XGBoost):")
                 print(f"   Accuracy: {m2['test_accuracy']:.4f}")
                 print(f"   F1 Score: {m2['test_f1']:.4f}")
@@ -139,8 +149,15 @@ jobs:
                     print("✅ XGBoost performs better!")
                 else:
                     print("⚠️  Random Forest performs better")
+            else:
+                print(f"❌ Metrics files not found in {output_dir}")
+                exit(1)
         else:
-            print(f"❌ Output directory not found: {output_dir}")
+            print(f"❌ Could not find outputs directory")
+            print("Searching all directories:")
+            for root, dirs, files in os.walk("."):
+                if files:
+                    print(f"  {root}: {files[:5]}")
             exit(1)
 
         print("\n" + "="*70)
