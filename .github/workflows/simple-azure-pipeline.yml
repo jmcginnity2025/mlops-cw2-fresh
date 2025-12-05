@@ -1,0 +1,149 @@
+# SIMPLE Azure ML Pipeline - Just Works
+name: Simple Azure ML Pipeline
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+env:
+  PYTHON_VERSION: '3.9'
+  RESOURCE_GROUP: 'cw2-mlops-rg'
+  WORKSPACE_NAME: 'cw2-mlops-workspace'
+  COMPUTE_NAME: 'cpu-cluster-fast'
+
+jobs:
+  # Single job - Train on Azure ML
+  train-and-test:
+    name: Train on Azure ML
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+
+    - name: Install Azure ML SDK
+      run: pip install azure-ai-ml azure-identity
+
+    - name: Azure Login
+      uses: azure/login@v1
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+    - name: Submit and Run Training Job
+      run: |
+        python << 'EOF'
+        from azure.ai.ml import MLClient, command, Input, Output
+        from azure.ai.ml.entities import Environment
+        from azure.identity import DefaultAzureCredential
+        import datetime
+        import time
+
+        print("🚀 SIMPLE AZURE ML TRAINING")
+        print("="*70)
+
+        # Connect
+        ml_client = MLClient(
+            DefaultAzureCredential(),
+            subscription_id="${{ secrets.AZURE_SUBSCRIPTION_ID }}",
+            resource_group_name="${{ env.RESOURCE_GROUP }}",
+            workspace_name="${{ env.WORKSPACE_NAME }}"
+        )
+        print("✅ Connected to Azure ML")
+
+        # Get dataset
+        data_asset = ml_client.data.get(name="support-tickets-dataset", version="1")
+        print(f"✅ Dataset: {data_asset.name}")
+
+        # Create environment (will trigger prepare_image job)
+        env_version = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+        env = Environment(
+            name="mlops-env",
+            version=env_version,
+            conda_file="environment.yml",
+            image="mcr.microsoft.com/azureml/openmpi4.1.0-ubuntu20.04:latest"
+        )
+        print(f"✅ Environment: mlops-env:{env_version}")
+
+        # Submit job
+        job = command(
+            code="./",
+            command="python train_simple.py",
+            inputs={"dataset": Input(type="uri_file", path=data_asset.id)},
+            outputs={"outputs": Output(type="uri_folder")},
+            environment=env,
+            compute="${{ env.COMPUTE_NAME }}",
+            experiment_name="simple-pipeline",
+            display_name="run-${{ github.run_number }}"
+        )
+
+        submitted_job = ml_client.jobs.create_or_update(job)
+        print(f"\n✅ Job submitted: {submitted_job.name}")
+        print(f"📊 View: https://ml.azure.com/runs/{submitted_job.name}")
+
+        # Wait for completion
+        print("\n⏳ Waiting for training...")
+        ml_client.jobs.stream(submitted_job.name)
+
+        # Check status
+        final_job = ml_client.jobs.get(submitted_job.name)
+        if final_job.status != "Completed":
+            print(f"❌ Failed: {final_job.status}")
+            exit(1)
+
+        print("\n✅ Training completed!")
+
+        # Download outputs
+        print("\n📥 Downloading outputs...")
+        ml_client.jobs.download(
+            name=submitted_job.name,
+            download_path="./downloads",
+            output_name="outputs"
+        )
+
+        # Find and display results
+        import os
+        import json
+
+        output_dir = f"./downloads/named-outputs/outputs"
+        if os.path.exists(output_dir):
+            print(f"\n📦 Downloaded files:")
+            for file in os.listdir(output_dir):
+                print(f"   - {file}")
+
+            # Load and display metrics
+            if os.path.exists(f"{output_dir}/iteration_1_metrics.json"):
+                with open(f"{output_dir}/iteration_1_metrics.json") as f:
+                    m1 = json.load(f)
+                print(f"\n📊 Iteration 1 (Random Forest):")
+                print(f"   Accuracy: {m1['test_accuracy']:.4f}")
+                print(f"   F1 Score: {m1['test_f1']:.4f}")
+
+            if os.path.exists(f"{output_dir}/iteration_2_metrics.json"):
+                with open(f"{output_dir}/iteration_2_metrics.json") as f:
+                    m2 = json.load(f)
+                print(f"\n📊 Iteration 2 (XGBoost):")
+                print(f"   Accuracy: {m2['test_accuracy']:.4f}")
+                print(f"   F1 Score: {m2['test_f1']:.4f}")
+
+                # Compare
+                improvement = (m2['test_f1'] - m1['test_f1']) / m1['test_f1'] * 100
+                print(f"\n📈 Improvement: {improvement:.2f}%")
+
+                if m2['test_f1'] > m1['test_f1']:
+                    print("✅ XGBoost performs better!")
+                else:
+                    print("⚠️  Random Forest performs better")
+        else:
+            print(f"❌ Output directory not found: {output_dir}")
+            exit(1)
+
+        print("\n" + "="*70)
+        print("🎉 PIPELINE COMPLETE!")
+        print("="*70)
+        EOF
