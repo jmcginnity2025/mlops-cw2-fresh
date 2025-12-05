@@ -116,7 +116,7 @@ jobs:
         # Submit training job (trains both Random Forest and XGBoost)
         job = command(
             code="./",
-            command='python train_azure.py --data_path ${{inputs.dataset}}',
+            command="python train_azure.py --data_path ${{inputs.dataset}}",
             inputs={"dataset": Input(type="uri_file", path=data_asset.id)},
             outputs={"outputs": Output(type="uri_folder")},
             environment=env,
