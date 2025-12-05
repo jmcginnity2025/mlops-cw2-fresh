@@ -422,7 +422,6 @@ jobs:
         from azure.ai.ml.entities import (
             ManagedOnlineEndpoint,
             ManagedOnlineDeployment,
-            Model,
             Environment,
             CodeConfiguration
         )
@@ -454,26 +453,21 @@ jobs:
         ml_client.online_endpoints.begin_create_or_update(endpoint).result()
         print("✅ Endpoint ready")
 
-        # Register model
-        model_path = "./models/iteration_2/"
-        model = Model(
-            path=model_path,
-            name="support-ticket-classifier",
-            description="XGBoost model for ticket classification",
-            version="${{ github.run_number }}"
-        )
+        # Deploy directly from local model files (no Model Registry)
+        # Copy model file to deployment directory
+        import shutil
+        os.makedirs("deployment", exist_ok=True)
+        shutil.copy("./models/iteration_2/iteration_2_model.pkl", "./deployment/iteration_2_model.pkl")
+        shutil.copy("score.py", "./deployment/score.py")
 
-        print("\n📦 Registering model...")
-        registered_model = ml_client.models.create_or_update(model)
-        print(f"✅ Model registered: {registered_model.name}:{registered_model.version}")
+        print("\n📦 Preparing deployment package (without Model Registry)...")
 
-        # Create deployment
+        # Create deployment directly from local files
         deployment = ManagedOnlineDeployment(
             name="blue",
             endpoint_name=endpoint_name,
-            model=registered_model.id,
             code_configuration=CodeConfiguration(
-                code="./",
+                code="./deployment",
                 scoring_script="score.py"
             ),
             environment=Environment(
@@ -485,6 +479,7 @@ jobs:
         )
 
         print(f"\n🚀 Deploying model to endpoint...")
+        print("   (Deploying directly from files, skipping Model Registry)")
         ml_client.online_deployments.begin_create_or_update(deployment).result()
         print("✅ Deployment complete")
 
@@ -501,7 +496,7 @@ jobs:
         with open("endpoint_uri.txt", "w") as f:
             f.write(endpoint.scoring_uri)
 
-        print("\n✅ Deployment successful!")
+        print("\n✅ Deployment successful (without Model Registry)!")
         EOF
 
     - name: Get endpoint URI

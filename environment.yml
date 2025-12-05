@@ -11,5 +11,5 @@ dependencies:
       - scikit-learn
       - xgboost
       - azureml-core
-      - mlflow
+      - joblib
       - locust

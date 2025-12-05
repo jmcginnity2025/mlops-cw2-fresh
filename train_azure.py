@@ -1,6 +1,6 @@
 """
 Training Script for Azure ML
-Trains both iterations and logs metrics to Azure ML Studio (native logging, not MLflow)
+Trains both iterations and logs metrics to Azure ML Studio
 """
 import pandas as pd
 import numpy as np
@@ -14,7 +14,7 @@ import os
 import pickle
 import json
 
-# Import both Azure ML native logging and MLflow (minimal usage)
+# Import Azure ML native logging
 try:
     from azureml.core import Run
     run = Run.get_context()
@@ -23,15 +23,6 @@ try:
 except:
     AZURE_ML_LOGGING = False
     print("INFO: Running locally - Azure ML logging not available")
-
-# Try to import MLflow for simple metric logging only (not model logging)
-try:
-    import mlflow
-    MLFLOW_AVAILABLE = True
-    print("INFO: MLflow available for metric logging")
-except:
-    MLFLOW_AVAILABLE = False
-    print("INFO: MLflow not available")
 
 # Parse arguments
 parser = argparse.ArgumentParser()
@@ -115,8 +106,6 @@ print("\n" + "="*70)
 print("ITERATION 1: Baseline Random Forest")
 print("="*70)
 
-# No MLflow logging - we'll save everything to files
-
 # Train
 print("Training...")
 model1 = RandomForestClassifier(
@@ -166,17 +155,6 @@ if AZURE_ML_LOGGING:
     run.log("iteration_1_test_recall", float(test_recall))
     print("   Metrics logged to Azure ML Studio")
 
-# Also log to MLflow (simple metrics only, no model artifacts)
-if MLFLOW_AVAILABLE:
-    mlflow.log_metric("iteration_1_train_accuracy", float(train_acc))
-    mlflow.log_metric("iteration_1_test_accuracy", float(test_acc))
-    mlflow.log_metric("iteration_1_train_f1", float(train_f1))
-    mlflow.log_metric("iteration_1_test_f1", float(test_f1))
-    mlflow.log_param("iteration_1_model_type", "RandomForest")
-    mlflow.log_param("iteration_1_n_estimators", 100)
-    mlflow.log_param("iteration_1_max_depth", 10)
-    print("   Metrics logged to MLflow")
-
 # Save iteration 1 model
 with open("outputs/iteration_1_model.pkl", "wb") as f:
     pickle.dump(model1, f)
@@ -192,8 +170,6 @@ print(f"   Test F1 Score:  {test_f1:.4f}")
 print("\n" + "="*70)
 print("ITERATION 2: Improved XGBoost")
 print("="*70)
-
-# No MLflow logging - we'll save everything to files
 
 # Train
 print("Training...")
@@ -248,22 +224,6 @@ if AZURE_ML_LOGGING:
     improvement = (metrics_2['test_accuracy'] - metrics_1['test_accuracy']) * 100
     run.log("accuracy_improvement_percent", float(improvement))
     print("   Metrics logged to Azure ML Studio")
-
-# Also log to MLflow (simple metrics only, no model artifacts)
-if MLFLOW_AVAILABLE:
-    mlflow.log_metric("iteration_2_train_accuracy", float(train_acc))
-    mlflow.log_metric("iteration_2_test_accuracy", float(test_acc))
-    mlflow.log_metric("iteration_2_train_f1", float(train_f1))
-    mlflow.log_metric("iteration_2_test_f1", float(test_f1))
-    mlflow.log_param("iteration_2_model_type", "XGBoost")
-    mlflow.log_param("iteration_2_n_estimators", 200)
-    mlflow.log_param("iteration_2_max_depth", 6)
-    mlflow.log_param("iteration_2_learning_rate", 0.1)
-
-    # Log comparison
-    improvement = (metrics_2['test_accuracy'] - metrics_1['test_accuracy']) * 100
-    mlflow.log_metric("accuracy_improvement_percent", float(improvement))
-    print("   Metrics logged to MLflow")
 
 # Save iteration 2 model
 with open("outputs/iteration_2_model.pkl", "wb") as f:
