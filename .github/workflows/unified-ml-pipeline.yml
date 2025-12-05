@@ -201,14 +201,35 @@ jobs:
         os.makedirs("models/iteration_1", exist_ok=True)
         os.makedirs("models/iteration_2", exist_ok=True)
 
+        # Debug: List what was actually downloaded
+        print(f"\n🔍 Checking artifacts directory: {artifacts_path}")
+        if os.path.exists(artifacts_path):
+            print("Contents:")
+            for root, dirs, files in os.walk(artifacts_path):
+                for f in files:
+                    print(f"  {os.path.join(root, f)}")
+        else:
+            print(f"⚠️  Artifacts path does not exist!")
+            print(f"   Looking for: {artifacts_path}")
+            print("\nListing current directory:")
+            for root, dirs, files in os.walk("."):
+                for f in files:
+                    if f.endswith(".pkl"):
+                        print(f"  Found .pkl: {os.path.join(root, f)}")
+
         # Copy model files
         if os.path.exists(f"{artifacts_path}/iteration_1_model.pkl"):
             shutil.copy(f"{artifacts_path}/iteration_1_model.pkl", "models/iteration_1/iteration_1_model.pkl")
             print("✅ Copied iteration_1_model.pkl")
+        else:
+            print(f"❌ iteration_1_model.pkl NOT FOUND at {artifacts_path}")
 
         if os.path.exists(f"{artifacts_path}/iteration_2_model.pkl"):
             shutil.copy(f"{artifacts_path}/iteration_2_model.pkl", "models/iteration_2/iteration_2_model.pkl")
             print("✅ Copied iteration_2_model.pkl")
+        else:
+            print(f"❌ iteration_2_model.pkl NOT FOUND at {artifacts_path}")
+            raise FileNotFoundError(f"Required model file not found: {artifacts_path}/iteration_2_model.pkl")
 
         # Copy metrics files if they exist
         if os.path.exists(f"{artifacts_path}/iteration_1_metrics.json"):
