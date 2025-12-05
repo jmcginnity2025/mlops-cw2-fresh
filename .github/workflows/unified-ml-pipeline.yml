@@ -228,91 +228,14 @@ jobs:
         print("\n✅ Metrics downloaded and ready for regression testing")
         EOF
 
-    - name: Register Models in Model Registry
+    - name: Save Model Information
       run: |
-        python << 'EOF'
-        from azure.ai.ml import MLClient
-        from azure.ai.ml.entities import Model
-        from azure.identity import DefaultAzureCredential
-        import os
+        echo "Models trained successfully and ready for deployment"
+        echo "Skipping Model Registry - using downloaded model files directly"
 
-        print("\n" + "="*70)
-        print("REGISTERING MODELS IN MODEL REGISTRY")
-        print("="*70)
-
-        # Connect to workspace
-        ml_client = MLClient(
-            DefaultAzureCredential(),
-            subscription_id="${{ secrets.AZURE_SUBSCRIPTION_ID }}",
-            resource_group_name="${{ env.RESOURCE_GROUP }}",
-            workspace_name="${{ env.WORKSPACE_NAME }}"
-        )
-
-        # Read job name
-        with open("job_name.txt", "r") as f:
-            job_name = f.read().strip()
-
-        # Download model outputs first - more reliable than direct Azure ML URIs
-        print(f"\n📦 Downloading models from Azure ML job: {job_name}")
-        ml_client.jobs.download(name=job_name, download_path="./job_outputs", output_name="outputs")
-        print("   ✅ Models downloaded successfully")
-
-        # Register Iteration 1 Model (Baseline)
-        print("\n📝 Registering Iteration 1: Random Forest Baseline")
-        model1 = Model(
-            path="./job_outputs/named-outputs/outputs/iteration_1_model.pkl",
-            name="support-ticket-classifier-rf",
-            description="Random Forest baseline model for support ticket priority classification",
-            version="${{ github.run_number }}",
-            tags={
-                "iteration": "1",
-                "model_type": "RandomForest",
-                "framework": "scikit-learn",
-                "n_estimators": "100",
-                "max_depth": "10",
-                "github_run": "${{ github.run_number }}",
-                "commit_sha": "${{ github.sha }}"
-            }
-        )
-        registered_model1 = ml_client.models.create_or_update(model1)
-        print(f"   ✅ Registered: {registered_model1.name} v{registered_model1.version}")
-
-        # Register Iteration 2 Model (Improved - Production Candidate)
-        print("\n📝 Registering Iteration 2: XGBoost Improved Model")
-        model2 = Model(
-            path="./job_outputs/named-outputs/outputs/iteration_2_model.pkl",
-            name="support-ticket-classifier",
-            description="XGBoost improved model for support ticket priority classification - Production candidate",
-            version="${{ github.run_number }}",
-            tags={
-                "iteration": "2",
-                "model_type": "XGBoost",
-                "framework": "xgboost",
-                "n_estimators": "200",
-                "max_depth": "6",
-                "learning_rate": "0.1",
-                "github_run": "${{ github.run_number }}",
-                "commit_sha": "${{ github.sha }}",
-                "production_candidate": "true"
-            }
-        )
-        registered_model2 = ml_client.models.create_or_update(model2)
-        print(f"   ✅ Registered: {registered_model2.name} v{registered_model2.version}")
-
-        # Save model info for deployment step
-        with open("registered_model_name.txt", "w") as f:
-            f.write(registered_model2.name)
-        with open("registered_model_version.txt", "w") as f:
-            f.write(str(registered_model2.version))
-
-        print("\n" + "="*70)
-        print("MODEL REGISTRY SUMMARY")
-        print("="*70)
-        print(f"✅ Baseline Model: {registered_model1.name} v{registered_model1.version}")
-        print(f"✅ Production Model: {registered_model2.name} v{registered_model2.version}")
-        print(f"\n🔗 View in Azure ML Studio:")
-        print(f"   https://ml.azure.com/model/{registered_model2.name}/version/{registered_model2.version}")
-        EOF
+        # Just save a marker that models are ready
+        echo "support-ticket-classifier" > model_name.txt
+        echo "${{ github.run_number }}" > model_version.txt
 
     - name: Upload models and metrics
       uses: actions/upload-artifact@v4
@@ -429,6 +352,7 @@ jobs:
         echo "2. ✅ Model training (Azure ML cloud)" >> $GITHUB_STEP_SUMMARY
         echo "3. ✅ Regression testing (local)" >> $GITHUB_STEP_SUMMARY
         echo "4. ✅ Model versioning (passed)" >> $GITHUB_STEP_SUMMARY
+        echo "5. ⚠️  Model deployment (skipped - simplified pipeline)" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
         echo "#### Execution Details" >> $GITHUB_STEP_SUMMARY
         echo "- **Commit**: \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
@@ -449,14 +373,14 @@ jobs:
         fi
         echo "" >> $GITHUB_STEP_SUMMARY
         echo "#### Next Steps" >> $GITHUB_STEP_SUMMARY
-        echo "- 📦 Models versioned and ready for deployment" >> $GITHUB_STEP_SUMMARY
+        echo "- 📦 Models available in GitHub Actions artifacts" >> $GITHUB_STEP_SUMMARY
         echo "- 📊 View detailed metrics in Azure ML Studio" >> $GITHUB_STEP_SUMMARY
-        echo "- 🚀 Models can now be deployed to production" >> $GITHUB_STEP_SUMMARY
+        echo "- 💡 Deployment skipped (simplified pipeline for coursework)" >> $GITHUB_STEP_SUMMARY
 
     - name: Success notification
       run: |
         echo "========================================================"
-        echo "🎉 UNIFIED PIPELINE SUCCESSFUL!"
+        echo "🎉 PIPELINE SUCCESSFUL!"
         echo "========================================================"
         echo "✅ Data preprocessed locally"
         echo "✅ Models trained on Azure ML cloud"
@@ -464,164 +388,5 @@ jobs:
         echo "✅ Models versioned: ${{ env.MODEL_VERSION }}"
         echo ""
         echo "All quality gates passed!"
-        echo "Models are ready for deployment."
-        echo "========================================================"
-
-  # Job 5: Deploy to Online Endpoint (Production Deployment)
-  deploy-endpoint:
-    name: Deploy to Online Endpoint
-    runs-on: ubuntu-latest
-    needs: version-models
-
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v3
-
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: ${{ env.PYTHON_VERSION }}
-
-    - name: Install Azure ML SDK
-      run: |
-        python -m pip install --upgrade pip
-        pip install azure-ai-ml azure-identity
-
-    - name: Azure Login
-      uses: azure/login@v1
-      with:
-        creds: ${{ secrets.AZURE_CREDENTIALS }}
-
-    - name: Create or Update Online Endpoint
-      run: |
-        python << 'EOF'
-        from azure.ai.ml import MLClient
-        from azure.ai.ml.entities import (
-            ManagedOnlineEndpoint,
-            ManagedOnlineDeployment,
-            Model,
-            Environment,
-            CodeConfiguration
-        )
-        from azure.identity import DefaultAzureCredential
-        import time
-
-        print("="*70)
-        print("DEPLOYING MODEL TO ONLINE ENDPOINT")
-        print("="*70)
-
-        # Connect to workspace
-        ml_client = MLClient(
-            DefaultAzureCredential(),
-            subscription_id="${{ secrets.AZURE_SUBSCRIPTION_ID }}",
-            resource_group_name="${{ env.RESOURCE_GROUP }}",
-            workspace_name="${{ env.WORKSPACE_NAME }}"
-        )
-
-        endpoint_name = "support-ticket-classifier"
-
-        # Check if endpoint exists
-        try:
-            endpoint = ml_client.online_endpoints.get(name=endpoint_name)
-            print(f"\n✅ Endpoint '{endpoint_name}' already exists")
-        except:
-            print(f"\n📝 Creating new endpoint: {endpoint_name}")
-            endpoint = ManagedOnlineEndpoint(
-                name=endpoint_name,
-                description="Support ticket priority classification - real-time inference",
-                auth_mode="key",
-                tags={
-                    "model": "support-ticket-classifier",
-                    "purpose": "production",
-                    "created_by": "github-actions"
-                }
-            )
-            ml_client.online_endpoints.begin_create_or_update(endpoint).result()
-            print(f"   ✅ Endpoint created successfully")
-
-        # Get the latest registered model
-        print(f"\n📦 Fetching latest model from registry...")
-        model = ml_client.models.get(
-            name="support-ticket-classifier",
-            version="${{ github.run_number }}"
-        )
-        print(f"   ✅ Found model: {model.name} v{model.version}")
-
-        # Create deployment
-        deployment_name = f"deployment-v${{ github.run_number }}"
-        print(f"\n🚀 Creating deployment: {deployment_name}")
-
-        deployment = ManagedOnlineDeployment(
-            name=deployment_name,
-            endpoint_name=endpoint_name,
-            model=model,
-            instance_type="Standard_DS2_v2",
-            instance_count=1,
-            tags={
-                "model_version": str(model.version),
-                "github_run": "${{ github.run_number }}",
-                "commit_sha": "${{ github.sha }}"
-            }
-        )
-
-        ml_client.online_deployments.begin_create_or_update(deployment).wait()
-        print(f"   ✅ Deployment created successfully")
-
-        # Update endpoint traffic to point to new deployment (Blue-Green deployment)
-        print(f"\n🔄 Updating endpoint traffic to new deployment...")
-        endpoint.traffic = {deployment_name: 100}
-        ml_client.online_endpoints.begin_create_or_update(endpoint).result()
-        print(f"   ✅ Traffic routed to new deployment (100%)")
-
-        # Get endpoint details
-        endpoint = ml_client.online_endpoints.get(name=endpoint_name)
-
-        print("\n" + "="*70)
-        print("DEPLOYMENT SUMMARY")
-        print("="*70)
-        print(f"✅ Endpoint: {endpoint_name}")
-        print(f"✅ Deployment: {deployment_name}")
-        print(f"✅ Model: {model.name} v{model.version}")
-        print(f"✅ Scoring URI: {endpoint.scoring_uri}")
-        print(f"\n🔗 View in Azure ML Studio:")
-        print(f"   https://ml.azure.com/endpoints/realtime/{endpoint_name}")
-        print("\n📝 Test your endpoint:")
-        print(f"   curl -H 'Authorization: Bearer YOUR_KEY' \\")
-        print(f"        -H 'Content-Type: application/json' \\")
-        print(f"        -d @sample_request.json \\")
-        print(f"        {endpoint.scoring_uri}")
-
-        # Save endpoint info
-        with open("endpoint_uri.txt", "w") as f:
-            f.write(endpoint.scoring_uri)
-
-        EOF
-
-    - name: Test Endpoint
-      run: |
-        echo "### 🚀 Deployment Results" >> $GITHUB_STEP_SUMMARY
-        echo "" >> $GITHUB_STEP_SUMMARY
-        echo "**Online endpoint deployed successfully!**" >> $GITHUB_STEP_SUMMARY
-        echo "" >> $GITHUB_STEP_SUMMARY
-        if [ -f endpoint_uri.txt ]; then
-          ENDPOINT_URI=$(cat endpoint_uri.txt)
-          echo "- **Endpoint**: support-ticket-classifier" >> $GITHUB_STEP_SUMMARY
-          echo "- **Deployment**: deployment-v${{ github.run_number }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Model Version**: ${{ github.run_number }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Scoring URI**: \`$ENDPOINT_URI\`" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "🔗 [View in Azure ML Studio](https://ml.azure.com/endpoints/realtime/support-ticket-classifier)" >> $GITHUB_STEP_SUMMARY
-        fi
-
-    - name: Deployment success notification
-      run: |
-        echo "========================================================"
-        echo "🎉 DEPLOYMENT SUCCESSFUL!"
-        echo "========================================================"
-        echo "✅ Model deployed to online endpoint"
-        echo "✅ Real-time inference available"
-        echo "✅ Endpoint: support-ticket-classifier"
-        echo "✅ Deployment: deployment-v${{ github.run_number }}"
-        echo ""
-        echo "Your model is now serving predictions in production!"
+        echo "Models available in artifacts (deployment skipped)."
         echo "========================================================"
