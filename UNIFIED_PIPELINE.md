@@ -36,8 +36,9 @@ Commit to GitHub
 │   ✅ Submit training job to cpu-cluster                 │
 │   ✅ Train Iteration 1: Random Forest                   │
 │   ✅ Train Iteration 2: XGBoost                         │
-│   ✅ Log metrics to MLflow                              │
-│   ✅ Download metrics for regression test               │
+│   ✅ Log metrics to Azure ML Studio                     │
+│   ✅ Download model artifacts                           │
+│   ✅ Register models in Model Registry                  │
 │   ⏱️ Duration: ~15-20 minutes (first run)               │
 │                                                          │
 │         ↓                                                │
@@ -51,13 +52,25 @@ Commit to GitHub
 │                                                          │
 │         ↓                                                │
 │                                                          │
-│ Job 4: Version & Deploy (Only if passed)                │
+│ Job 4: Version Models (Only if passed)                  │
 │   ✅ Create version tag                                 │
 │   ✅ Generate pipeline summary                          │
-│   ✅ Models ready for deployment                        │
+│   ✅ Prepare for deployment                             │
 │   ⏱️ Duration: ~10 seconds                              │
 │                                                          │
+│         ↓                                                │
+│                                                          │
+│ Job 5: Deploy to Online Endpoint (Production)           │
+│   ✅ Create/Update Azure ML Online Endpoint             │
+│   ✅ Deploy latest model version                        │
+│   ✅ Route 100% traffic to new deployment               │
+│   ✅ Real-time inference API ready                      │
+│   ⏱️ Duration: ~5-10 minutes                            │
+│                                                          │
 └─────────────────────────────────────────────────────────┘
+       ↓
+   Production API
+   (Real-time predictions)
 ```
 
 ---
