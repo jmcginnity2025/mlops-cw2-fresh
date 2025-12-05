@@ -12,3 +12,4 @@ dependencies:
       - xgboost
       - azureml-core
       - mlflow
+      - locust
