@@ -1,6 +1,6 @@
 """
 Training Script for Azure ML
-Trains both iterations and logs metrics with MLflow
+Trains both iterations and saves metrics to files (MLflow disabled due to compatibility issues)
 """
 import pandas as pd
 import numpy as np
@@ -12,15 +12,12 @@ from xgboost import XGBClassifier
 import argparse
 import os
 import pickle
-import tempfile
+import json
 
-# Try to import MLflow (optional for local testing)
-try:
-    import mlflow
-    MLFLOW_AVAILABLE = True
-except ImportError:
-    MLFLOW_AVAILABLE = False
-    print("WARNING: MLflow not available - running in local test mode (no logging)")
+# MLFLOW DISABLED - Azure ML's MLflow has too many compatibility issues
+# We'll save models and metrics to files instead
+MLFLOW_AVAILABLE = False
+print("INFO: MLflow logging disabled - saving metrics to files instead")
 
 # Parse arguments
 parser = argparse.ArgumentParser()
@@ -104,12 +101,7 @@ print("\n" + "="*70)
 print("ITERATION 1: Baseline Random Forest")
 print("="*70)
 
-# Azure ML automatically manages the run, so we don't need start_run()
-# Log parameters directly
-if MLFLOW_AVAILABLE:
-    mlflow.log_param("iteration_1_model_type", "RandomForest")
-    mlflow.log_param("iteration_1_n_estimators", 100)
-    mlflow.log_param("iteration_1_max_depth", 10)
+# No MLflow logging - we'll save everything to files
 
 # Train
 print("Training...")
@@ -132,22 +124,28 @@ test_f1 = f1_score(y_test, y_test_pred, average='weighted')
 test_precision = precision_score(y_test, y_test_pred, average='weighted')
 test_recall = recall_score(y_test, y_test_pred, average='weighted')
 
-# Log metrics for iteration 1
-if MLFLOW_AVAILABLE:
-    mlflow.log_metric("iteration_1_train_accuracy", train_acc)
-    mlflow.log_metric("iteration_1_test_accuracy", test_acc)
-    mlflow.log_metric("iteration_1_train_f1", train_f1)
-    mlflow.log_metric("iteration_1_test_f1", test_f1)
-    mlflow.log_metric("iteration_1_test_precision", test_precision)
-    mlflow.log_metric("iteration_1_test_recall", test_recall)
+# Save metrics and model to files (MLflow disabled)
+os.makedirs("outputs", exist_ok=True)
 
-    # Save model as artifact (avoids MLflow logged-models API issue)
-    with tempfile.TemporaryDirectory() as tmpdir:
-        model_path = os.path.join(tmpdir, "iteration_1_model.pkl")
-        with open(model_path, 'wb') as f:
-            pickle.dump(model1, f)
-        mlflow.log_artifact(model_path, artifact_path="iteration_1_model")
-        print("   Model saved as artifact")
+# Save iteration 1 metrics
+metrics_1 = {
+    "iteration": 1,
+    "model_type": "RandomForest",
+    "train_accuracy": float(train_acc),
+    "test_accuracy": float(test_acc),
+    "train_f1": float(train_f1),
+    "test_f1": float(test_f1),
+    "test_precision": float(test_precision),
+    "test_recall": float(test_recall)
+}
+with open("outputs/iteration_1_metrics.json", "w") as f:
+    json.dump(metrics_1, f, indent=2)
+print("   Metrics saved to outputs/iteration_1_metrics.json")
+
+# Save iteration 1 model
+with open("outputs/iteration_1_model.pkl", "wb") as f:
+    pickle.dump(model1, f)
+print("   Model saved to outputs/iteration_1_model.pkl")
 
 print(f"   Train Accuracy: {train_acc:.4f}")
 print(f"   Test Accuracy:  {test_acc:.4f}")
@@ -160,13 +158,7 @@ print("\n" + "="*70)
 print("ITERATION 2: Improved XGBoost")
 print("="*70)
 
-# Azure ML automatically manages the run, so we don't need start_run()
-# Log parameters directly
-if MLFLOW_AVAILABLE:
-    mlflow.log_param("iteration_2_model_type", "XGBoost")
-    mlflow.log_param("iteration_2_n_estimators", 200)
-    mlflow.log_param("iteration_2_max_depth", 6)
-    mlflow.log_param("iteration_2_learning_rate", 0.1)
+# No MLflow logging - we'll save everything to files
 
 # Train
 print("Training...")
@@ -193,22 +185,25 @@ test_f1 = f1_score(y_test, y_test_pred, average='weighted')
 test_precision = precision_score(y_test, y_test_pred, average='weighted')
 test_recall = recall_score(y_test, y_test_pred, average='weighted')
 
-# Log metrics for iteration 2
-if MLFLOW_AVAILABLE:
-    mlflow.log_metric("iteration_2_train_accuracy", train_acc)
-    mlflow.log_metric("iteration_2_test_accuracy", test_acc)
-    mlflow.log_metric("iteration_2_train_f1", train_f1)
-    mlflow.log_metric("iteration_2_test_f1", test_f1)
-    mlflow.log_metric("iteration_2_test_precision", test_precision)
-    mlflow.log_metric("iteration_2_test_recall", test_recall)
+# Save iteration 2 metrics
+metrics_2 = {
+    "iteration": 2,
+    "model_type": "XGBoost",
+    "train_accuracy": float(train_acc),
+    "test_accuracy": float(test_acc),
+    "train_f1": float(train_f1),
+    "test_f1": float(test_f1),
+    "test_precision": float(test_precision),
+    "test_recall": float(test_recall)
+}
+with open("outputs/iteration_2_metrics.json", "w") as f:
+    json.dump(metrics_2, f, indent=2)
+print("   Metrics saved to outputs/iteration_2_metrics.json")
 
-    # Save model as artifact (avoids MLflow logged-models API issue)
-    with tempfile.TemporaryDirectory() as tmpdir:
-        model_path = os.path.join(tmpdir, "iteration_2_model.pkl")
-        with open(model_path, 'wb') as f:
-            pickle.dump(model2, f)
-        mlflow.log_artifact(model_path, artifact_path="iteration_2_model")
-        print("   Model saved as artifact")
+# Save iteration 2 model
+with open("outputs/iteration_2_model.pkl", "wb") as f:
+    pickle.dump(model2, f)
+print("   Model saved to outputs/iteration_2_model.pkl")
 
 print(f"   Train Accuracy: {train_acc:.4f}")
 print(f"   Test Accuracy:  {test_acc:.4f}")
@@ -218,4 +213,8 @@ print("\n" + "="*70)
 print("TRAINING COMPLETE")
 print("="*70)
 print("\nBoth iterations trained successfully!")
-print("Metrics logged to MLflow")
+print("Models and metrics saved to outputs/ directory")
+print("\nSummary:")
+print(f"  Iteration 1 (Random Forest): {metrics_1['test_accuracy']:.4f} accuracy")
+print(f"  Iteration 2 (XGBoost):       {metrics_2['test_accuracy']:.4f} accuracy")
+print(f"  Improvement: {(metrics_2['test_accuracy'] - metrics_1['test_accuracy'])*100:.2f}%")
