@@ -99,12 +99,19 @@ jobs:
         data_asset = ml_client.data.get(name="support-tickets-dataset", version="1")
         print(f"✅ Dataset: {data_asset.name}")
 
-        # Create environment from conda file (this triggers prepare_image job in Azure ML)
+        # Create environment with unique version to force rebuild (creates prepare_image job)
+        import datetime
+        env_version = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+
         env = Environment(
             name="mlops-training-env",
+            version=env_version,
             conda_file="environment.yml",
             image="mcr.microsoft.com/azureml/openmpi4.1.0-ubuntu20.04:latest"
         )
+
+        print(f"🔨 Creating environment version: {env_version}")
+        print("   This will trigger Azure ML to create prepare_image job")
 
         # Submit training job (trains both Random Forest and XGBoost)
         job = command(
