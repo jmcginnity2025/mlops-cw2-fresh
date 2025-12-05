@@ -1,6 +1,7 @@
 """
 Simple Training Script for Azure ML
 No arguments needed - finds dataset automatically
+Logs metrics to Azure ML Studio
 """
 import pandas as pd
 import numpy as np
@@ -12,10 +13,15 @@ import os
 import pickle
 import json
 import glob
+import mlflow
 
 print("="*70)
 print("SIMPLE AZURE ML TRAINING")
 print("="*70)
+
+# Enable Azure ML logging
+mlflow.autolog(disable=True)  # Disable autolog to have full control
+print("✅ MLflow logging enabled")
 
 # Find the dataset automatically
 print("\n1. Looking for dataset...")
@@ -70,6 +76,12 @@ metrics1 = {
 print(f"   Accuracy: {metrics1['test_accuracy']:.4f}")
 print(f"   F1 Score: {metrics1['test_f1']:.4f}")
 
+# Log to Azure ML
+mlflow.log_metric("iteration_1_accuracy", metrics1['test_accuracy'])
+mlflow.log_metric("iteration_1_f1_score", metrics1['test_f1'])
+mlflow.log_metric("iteration_1_precision", metrics1['test_precision'])
+mlflow.log_metric("iteration_1_recall", metrics1['test_recall'])
+
 # Save iteration 1
 with open("outputs/iteration_1_model.pkl", "wb") as f:
     pickle.dump(model1, f)
@@ -100,6 +112,16 @@ metrics2 = {
 print(f"   Accuracy: {metrics2['test_accuracy']:.4f}")
 print(f"   F1 Score: {metrics2['test_f1']:.4f}")
 
+# Log to Azure ML
+mlflow.log_metric("iteration_2_accuracy", metrics2['test_accuracy'])
+mlflow.log_metric("iteration_2_f1_score", metrics2['test_f1'])
+mlflow.log_metric("iteration_2_precision", metrics2['test_precision'])
+mlflow.log_metric("iteration_2_recall", metrics2['test_recall'])
+
+# Calculate and log improvement
+improvement = (metrics2['test_f1'] - metrics1['test_f1']) / metrics1['test_f1'] * 100
+mlflow.log_metric("f1_improvement_percent", improvement)
+
 # Save iteration 2
 with open("outputs/iteration_2_model.pkl", "wb") as f:
     pickle.dump(model2, f)
@@ -111,4 +133,6 @@ print("TRAINING COMPLETE")
 print("="*70)
 print(f"✅ Iteration 1 saved: outputs/iteration_1_model.pkl")
 print(f"✅ Iteration 2 saved: outputs/iteration_2_model.pkl")
+print(f"✅ Metrics logged to Azure ML Studio")
+print(f"📈 F1 Score Improvement: {improvement:.2f}%")
 print("="*70)
