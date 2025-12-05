@@ -1,6 +1,6 @@
 """
 Training Script for Azure ML
-Trains both iterations and saves metrics to files (MLflow disabled due to compatibility issues)
+Trains both iterations and logs metrics to Azure ML Studio (native logging, not MLflow)
 """
 import pandas as pd
 import numpy as np
@@ -14,10 +14,15 @@ import os
 import pickle
 import json
 
-# MLFLOW DISABLED - Azure ML's MLflow has too many compatibility issues
-# We'll save models and metrics to files instead
-MLFLOW_AVAILABLE = False
-print("INFO: MLflow logging disabled - saving metrics to files instead")
+# Try to import Azure ML's native logging (works reliably, unlike MLflow)
+try:
+    from azureml.core import Run
+    run = Run.get_context()
+    AZURE_ML_LOGGING = True
+    print("INFO: Azure ML native logging enabled")
+except:
+    AZURE_ML_LOGGING = False
+    print("INFO: Running locally - Azure ML logging not available")
 
 # Parse arguments
 parser = argparse.ArgumentParser()
@@ -124,7 +129,7 @@ test_f1 = f1_score(y_test, y_test_pred, average='weighted')
 test_precision = precision_score(y_test, y_test_pred, average='weighted')
 test_recall = recall_score(y_test, y_test_pred, average='weighted')
 
-# Save metrics and model to files (MLflow disabled)
+# Save metrics and model to files
 os.makedirs("outputs", exist_ok=True)
 
 # Save iteration 1 metrics
@@ -141,6 +146,16 @@ metrics_1 = {
 with open("outputs/iteration_1_metrics.json", "w") as f:
     json.dump(metrics_1, f, indent=2)
 print("   Metrics saved to outputs/iteration_1_metrics.json")
+
+# Log to Azure ML Studio (will appear in Metrics tab)
+if AZURE_ML_LOGGING:
+    run.log("iteration_1_train_accuracy", float(train_acc))
+    run.log("iteration_1_test_accuracy", float(test_acc))
+    run.log("iteration_1_train_f1", float(train_f1))
+    run.log("iteration_1_test_f1", float(test_f1))
+    run.log("iteration_1_test_precision", float(test_precision))
+    run.log("iteration_1_test_recall", float(test_recall))
+    print("   Metrics logged to Azure ML Studio")
 
 # Save iteration 1 model
 with open("outputs/iteration_1_model.pkl", "wb") as f:
@@ -199,6 +214,20 @@ metrics_2 = {
 with open("outputs/iteration_2_metrics.json", "w") as f:
     json.dump(metrics_2, f, indent=2)
 print("   Metrics saved to outputs/iteration_2_metrics.json")
+
+# Log to Azure ML Studio (will appear in Metrics tab)
+if AZURE_ML_LOGGING:
+    run.log("iteration_2_train_accuracy", float(train_acc))
+    run.log("iteration_2_test_accuracy", float(test_acc))
+    run.log("iteration_2_train_f1", float(train_f1))
+    run.log("iteration_2_test_f1", float(test_f1))
+    run.log("iteration_2_test_precision", float(test_precision))
+    run.log("iteration_2_test_recall", float(test_recall))
+
+    # Log comparison metrics
+    improvement = (metrics_2['test_accuracy'] - metrics_1['test_accuracy']) * 100
+    run.log("accuracy_improvement_percent", float(improvement))
+    print("   Metrics logged to Azure ML Studio")
 
 # Save iteration 2 model
 with open("outputs/iteration_2_model.pkl", "wb") as f:
